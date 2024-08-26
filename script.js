@@ -45,25 +45,37 @@ document.getElementById('processButton').addEventListener('click', function() {
         participantsRoles[select.getAttribute('data-participant')] = select.value;
     });
 
-    processData(participantsRoles, timezone, startDate, endDate, callsPerWeek, durationPerCall);
+    showLoadingIndicator(); // Show loading indicator before processing
+
+    setTimeout(() => { // Simulate a delay for the loading indicator to be visible
+        processData(participantsRoles, timezone, startDate, endDate, callsPerWeek, durationPerCall);
+    }, 100); // Small timeout to ensure loading indicator is visible
 });
 
 function processData(participantsRoles, timezone, startDate, endDate, callsPerWeek, durationPerCall) {
     const fileInput = document.getElementById('fileInput');
     if (!fileInput.files[0]) {
         alert('Please upload a JSON file.');
+        hideLoadingIndicator(); // Hide loading indicator on error
         return;
     }
 
     const reader = new FileReader();
     reader.onload = function(e) {
-        const data = JSON.parse(e.target.result);
-        const callRecords = data.messages.filter(message => message.call_duration && 
-            new Date(message.timestamp_ms) >= startDate &&
-            new Date(message.timestamp_ms) <= endDate
-        );
+        try {
+            const data = JSON.parse(e.target.result);
+            const callRecords = data.messages.filter(message => message.call_duration && 
+                new Date(message.timestamp_ms) >= startDate &&
+                new Date(message.timestamp_ms) <= endDate
+            );
 
-        analyzeCalls(callRecords, participantsRoles, timezone, callsPerWeek, durationPerCall);
+            analyzeCalls(callRecords, participantsRoles, timezone, callsPerWeek, durationPerCall);
+        } catch (error) {
+            console.error("Error processing the data: ", error);
+            alert("An error occurred while processing the data. Please try again.");
+        } finally {
+            hideLoadingIndicator(); // Hide loading indicator after processing
+        }
     };
     reader.readAsText(fileInput.files[0]);
 }
@@ -138,51 +150,6 @@ function analyzeCalls(callRecords, participantsRoles, timezone, callsPerWeek, du
     displayDetails(weeklyData, timezone);
 }
 
-
-    callRecords.forEach(call => {
-        const date = new Date(call.timestamp_ms);
-        const dateString = new Date(date).toLocaleDateString('en-US', { timeZone: timezone });
-
-        if (!dailyData[dateString]) {
-            dailyData[dateString] = { totalDuration: 0, calls: 0 };
-        }
-
-        dailyData[dateString].totalDuration += call.call_duration;
-        dailyData[dateString].calls = 1;  // Each day counts as one call, regardless of the number of calls on that day
-    });
-
-    const weeklyData = {};
-
-    Object.keys(dailyData).forEach(day => {
-        const date = new Date(day);
-        const week = getWeekNumber(date);
-
-        if (!weeklyData[week]) {
-            weeklyData[week] = { totalCalls: 0, totalDuration: 0, days: {} };
-        }
-
-        weeklyData[week].totalCalls += 1;
-        weeklyData[week].totalDuration += dailyData[day].totalDuration;
-        weeklyData[week].days[day] = dailyData[day].totalDuration;
-
-        if (dailyData[day].totalDuration < durationPerCall) {
-            summaryData.daysBelowMin++;
-        } else {
-            summaryData.daysAboveMin++;
-        }
-    });
-
-    summaryData.totalCalls = Object.keys(dailyData).length;
-    summaryData.totalDuration = Object.values(dailyData).reduce((acc, day) => acc + day.totalDuration, 0);
-
-    const totalWeeks = Object.keys(weeklyData).length;
-    const averageCallsPerWeek = summaryData.totalCalls / totalWeeks;
-    const averageDurationPerCall = summaryData.totalDuration / summaryData.totalCalls;
-
-    displaySummary(averageCallsPerWeek, averageDurationPerCall, summaryData.daysBelowMin, summaryData.daysAboveMin);
-    displayDetails(weeklyData, timezone);
-}
-
 function getWeekNumber(d) {
     const date = new Date(d.getTime());
     date.setHours(0, 0, 0, 0);
@@ -239,4 +206,18 @@ function formatDuration(seconds) {
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     return `${hrs > 0 ? hrs + 'h ' : ''}${mins > 0 ? mins + 'm ' : ''}${secs}s`;
+}
+
+function showLoadingIndicator() {
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    if (loadingIndicator) {
+        loadingIndicator.style.display = 'block';
+    }
+}
+
+function hideLoadingIndicator() {
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    if (loadingIndicator) {
+        loadingIndicator.style.display = 'none';
+    }
 }

@@ -91,3 +91,10 @@ h1 {
     background-color: #f1f1f1;
     margin-top: 10px;
 }
+
+#loadingIndicator {
+    text-align: center;
+    font-weight: bold;
+    margin-top: 20px;
+    color: #4CAF50;
+}
