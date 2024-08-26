@@ -13,8 +13,16 @@
         <input type="file" id="fileInput" accept=".json" />
 
         <div id="settings">
-            <label for="participantsSelect">Select Participants:</label>
-            <select id="participantsSelect" multiple></select>
+            <label for="timezoneSelect">Select Timezone:</label>
+            <select id="timezoneSelect">
+                <option value="UTC">UTC</option>
+                <option value="America/New_York">America/New_York</option>
+                <option value="America/Los_Angeles">America/Los_Angeles</option>
+                <option value="Europe/London">Europe/London</option>
+                <!-- Add more timezones as needed -->
+            </select>
+
+            <div id="participantsRoles"></div>
 
             <label for="startDate">Start Date:</label>
             <input type="date" id="startDate" />

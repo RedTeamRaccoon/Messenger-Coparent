@@ -36,6 +36,15 @@ h1 {
     width: calc(50% - 10px);
 }
 
+#participantsRoles {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.participant-role {
+    margin-bottom: 10px;
+}
+
 #processButton {
     width: 100%;
     padding: 10px;
