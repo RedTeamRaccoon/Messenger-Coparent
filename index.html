@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messenger Call Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Messenger Call Tracker</h1>
+        
+        <input type="file" id="fileInput" accept=".json" />
+
+        <div id="settings">
+            <label for="participantsSelect">Select Participants:</label>
+            <select id="participantsSelect" multiple></select>
+
+            <label for="startDate">Start Date:</label>
+            <input type="date" id="startDate" />
+
+            <label for="endDate">End Date:</label>
+            <input type="date" id="endDate" />
+
+            <label for="callsPerWeek">Required Calls Per Week:</label>
+            <input type="number" id="callsPerWeek" value="1" min="1" />
+
+            <label for="durationPerCall">Required Duration Per Call (minutes):</label>
+            <input type="number" id="durationPerCall" value="30" min="1" />
+
+            <button id="processButton">Process Call Data</button>
+        </div>
+
+        <div id="summary"></div>
+        <div id="details"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
