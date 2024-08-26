@@ -69,7 +69,7 @@ function processData(participantsRoles, timezone, startDate, endDate, callsPerWe
 }
 
 function analyzeCalls(callRecords, participantsRoles, timezone, callsPerWeek, durationPerCall) {
-    const weeklyData = {};
+    const dailyData = {};
     const summaryData = {
         totalCalls: 0,
         totalDuration: 0,
@@ -79,33 +79,39 @@ function analyzeCalls(callRecords, participantsRoles, timezone, callsPerWeek, du
 
     callRecords.forEach(call => {
         const date = new Date(call.timestamp_ms);
+        const dateString = new Date(date).toLocaleDateString('en-US', { timeZone: timezone });
+
+        if (!dailyData[dateString]) {
+            dailyData[dateString] = { totalDuration: 0, calls: 0 };
+        }
+
+        dailyData[dateString].totalDuration += call.call_duration;
+        dailyData[dateString].calls = 1;  // Each day counts as one call, regardless of the number of calls on that day
+    });
+
+    const weeklyData = {};
+
+    Object.keys(dailyData).forEach(day => {
+        const date = new Date(day);
         const week = getWeekNumber(date);
-        const dateString = new Date(date).toLocaleString('en-US', { timeZone: timezone });
 
         if (!weeklyData[week]) {
-            weeklyData[week] = {};
+            weeklyData[week] = { totalCalls: 0, totalDuration: 0, days: {} };
         }
 
-        if (!weeklyData[week][dateString]) {
-            weeklyData[week][dateString] = { totalDuration: 0, calls: 0 };
+        weeklyData[week].totalCalls += 1;
+        weeklyData[week].totalDuration += dailyData[day].totalDuration;
+        weeklyData[week].days[day] = dailyData[day].totalDuration;
+
+        if (dailyData[day].totalDuration < durationPerCall) {
+            summaryData.daysBelowMin++;
+        } else {
+            summaryData.daysAboveMin++;
         }
-
-        weeklyData[week][dateString].totalDuration += call.call_duration;
-        weeklyData[week][dateString].calls = 1;
     });
 
-    Object.keys(weeklyData).forEach(week => {
-        Object.keys(weeklyData[week]).forEach(day => {
-            summaryData.totalCalls += weeklyData[week][day].calls;
-            summaryData.totalDuration += weeklyData[week][day].totalDuration;
-
-            if (weeklyData[week][day].totalDuration < durationPerCall) {
-                summaryData.daysBelowMin++;
-            } else {
-                summaryData.daysAboveMin++;
-            }
-        });
-    });
+    summaryData.totalCalls = Object.keys(dailyData).length;
+    summaryData.totalDuration = Object.values(dailyData).reduce((acc, day) => acc + day.totalDuration, 0);
 
     const totalWeeks = Object.keys(weeklyData).length;
     const averageCallsPerWeek = summaryData.totalCalls / totalWeeks;
@@ -155,9 +161,9 @@ function displayDetails(weeklyData, timezone) {
         const content = document.createElement('div');
         content.className = 'content';
 
-        Object.keys(weeklyData[week]).forEach(day => {
+        Object.keys(weeklyData[week].days).forEach(day => {
             const p = document.createElement('p');
-            p.textContent = `${day}: ${formatDuration(weeklyData[week][day].totalDuration)}`;
+            p.textContent = `${day}: ${formatDuration(weeklyData[week].days[day])}`;
             content.appendChild(p);
         });
 
