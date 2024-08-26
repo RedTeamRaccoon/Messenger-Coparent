@@ -96,6 +96,68 @@ function analyzeCalls(callRecords, participantsRoles, timezone, callsPerWeek, du
         const week = getWeekNumber(date);
 
         if (!weeklyData[week]) {
+            weeklyData[week] = { totalCalls: 0, totalDuration: 0, days: {}, daysAboveMin: 0, daysBelowMin: 0 };
+        }
+
+        weeklyData[week].totalCalls += 1;
+        weeklyData[week].totalDuration += dailyData[day].totalDuration;
+        weeklyData[week].days[day] = dailyData[day].totalDuration;
+
+        if (dailyData[day].totalDuration >= durationPerCall) {
+            weeklyData[week].daysAboveMin++;
+        } else {
+            weeklyData[week].daysBelowMin++;
+        }
+    });
+
+    // Adjust the daysBelowMin count based on the extra days logic
+    Object.keys(weeklyData).forEach(week => {
+        if (weeklyData[week].totalCalls > callsPerWeek && weeklyData[week].daysAboveMin >= callsPerWeek) {
+            const extraDays = weeklyData[week].totalCalls - callsPerWeek;
+
+            // Remove extra days with calls below the minimum duration
+            for (const day in weeklyData[week].days) {
+                if (weeklyData[week].days[day] < durationPerCall && extraDays > 0) {
+                    weeklyData[week].daysBelowMin--;
+                    extraDays--;
+                }
+            }
+        }
+
+        summaryData.totalCalls += weeklyData[week].totalCalls;
+        summaryData.totalDuration += weeklyData[week].totalDuration;
+        summaryData.daysBelowMin += weeklyData[week].daysBelowMin;
+        summaryData.daysAboveMin += weeklyData[week].daysAboveMin;
+    });
+
+    const totalWeeks = Object.keys(weeklyData).length;
+    const averageCallsPerWeek = summaryData.totalCalls / totalWeeks;
+    const averageDurationPerCall = summaryData.totalDuration / summaryData.totalCalls;
+
+    displaySummary(averageCallsPerWeek, averageDurationPerCall, summaryData.daysBelowMin, summaryData.daysAboveMin);
+    displayDetails(weeklyData, timezone);
+}
+
+
+    callRecords.forEach(call => {
+        const date = new Date(call.timestamp_ms);
+        const dateString = new Date(date).toLocaleDateString('en-US', { timeZone: timezone });
+
+        if (!dailyData[dateString]) {
+            dailyData[dateString] = { totalDuration: 0, calls: 0 };
+        }
+
+        dailyData[dateString].totalDuration += call.call_duration;
+        dailyData[dateString].calls = 1;  // Each day counts as one call, regardless of the number of calls on that day
+    });
+
+    const weeklyData = {};
+
+    Object.keys(dailyData).forEach(day => {
+        const date = new Date(day);
+        const week = getWeekNumber(date);
+
+        if (!weeklyData[week]) {
             weeklyData[week] = { totalCalls: 0, totalDuration: 0, days: {} };
         }
 
