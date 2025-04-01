@@ -98,11 +98,17 @@ function analyzeCalls(callRecords, participantsRoles, timezone, callsPerWeek, du
         compliantWeeks: 0
     };
 
-    // Process each call record
+        // Process each call record
     callRecords.forEach(call => {
-        const date = new Date(call.timestamp_ms);
-        const dateString = date.toLocaleDateString('en-US', { timeZone: timezone });
-        const timeString = date.toLocaleTimeString('en-US', { timeZone: timezone });
+        // The timestamp_ms in the JSON represents when the call ended
+        const endTime = new Date(call.timestamp_ms);
+        
+        // Calculate the start time by subtracting the call duration from the end time
+        const startTime = new Date(call.timestamp_ms - (call.call_duration * 1000));
+        
+        const dateString = startTime.toLocaleDateString('en-US', { timeZone: timezone });
+        const startTimeString = startTime.toLocaleTimeString('en-US', { timeZone: timezone });
+        const endTimeString = endTime.toLocaleTimeString('en-US', { timeZone: timezone });
         
         // Determine who initiated the call
         const initiator = call.sender_name;
@@ -114,7 +120,8 @@ function analyzeCalls(callRecords, participantsRoles, timezone, callsPerWeek, du
         // Store call data for CSV export
         allCallData.push({
             date: dateString,
-            time: timeString,
+            startTime: startTimeString,
+            endTime: endTimeString,
             initiator: initiator,
             initiatorRole: initiatorRole,
             durationSeconds: durationInSeconds,
@@ -133,7 +140,8 @@ function analyzeCalls(callRecords, participantsRoles, timezone, callsPerWeek, du
         dailyData[dateString].totalDuration += durationInSeconds;
         dailyData[dateString].calls += 1;
         dailyData[dateString].callDetails.push({
-            time: timeString,
+            startTime: startTimeString,
+            endTime: endTimeString,
             initiator: initiator,
             duration: durationInSeconds
         });
@@ -383,23 +391,21 @@ function displayDetails(weeklyData, monthlyData, timezone) {
                 </div>
             `;
             
-            // Add call details if there are multiple calls in a day
-            if (dayData.calls > 1) {
-                const detailsList = document.createElement('ul');
-                detailsList.className = 'call-details-list';
-                
-                dayData.details.forEach(call => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `
-                        <span class="call-time">${call.time}</span>
-                        <span class="call-initiator">${call.initiator}</span>
-                        <span class="call-duration">${formatDuration(call.duration)}</span>
-                    `;
-                    detailsList.appendChild(li);
-                });
-                
-                dayDiv.appendChild(detailsList);
-            }
+            // Always show call details, even for single calls
+            const detailsList = document.createElement('ul');
+            detailsList.className = 'call-details-list';
+            
+            dayData.details.forEach(call => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span class="call-time">${call.startTime} - ${call.endTime}</span>
+                    <span class="call-initiator">${call.initiator}</span>
+                    <span class="call-duration">${formatDuration(call.duration)}</span>
+                `;
+                detailsList.appendChild(li);
+            });
+            
+            dayDiv.appendChild(detailsList);
             
             content.appendChild(dayDiv);
         });
@@ -600,14 +606,15 @@ function exportToCSV() {
 
 function exportAllCalls() {
     const calls = window.exportData.allCalls;
-    const headers = ['Date', 'Time', 'Initiator', 'Role', 'Duration (seconds)', 'Duration'];
+    const headers = ['Date', 'Start Time', 'End Time', 'Initiator', 'Role', 'Duration (seconds)', 'Duration'];
     
     let csvContent = headers.join(',') + '\n';
     
     calls.forEach(call => {
         const row = [
             `"${call.date}"`,
-            `"${call.time}"`,
+            `"${call.startTime}"`,
+            `"${call.endTime}"`,
             `"${call.initiator}"`,
             `"${call.initiatorRole}"`,
             call.durationSeconds,
