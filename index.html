@@ -5,45 +5,128 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Messenger Call Tracker</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>Messenger Call Tracker</h1>
+        <header>
+            <h1>Messenger Call Tracker</h1>
+            <p class="subtitle">Analyze video call history for co-parenting arrangements</p>
+        </header>
         
-        <input type="file" id="fileInput" accept=".json" />
-
-        <div id="settings">
-            <label for="timezoneSelect">Select Timezone:</label>
-            <select id="timezoneSelect">
-                <option value="UTC">UTC</option>
-                <option value="America/New_York">America/New_York</option>
-                <option value="America/Los_Angeles">America/Los_Angeles</option>
-                <option value="Europe/London">Europe/London</option>
-                <!-- Add more timezones as needed -->
-            </select>
-
-            <div id="participantsRoles"></div>
-
-            <label for="startDate">Start Date:</label>
-            <input type="date" id="startDate" />
-
-            <label for="endDate">End Date:</label>
-            <input type="date" id="endDate" />
-
-            <label for="callsPerWeek">Required Calls Per Week:</label>
-            <input type="number" id="callsPerWeek" value="1" min="1" />
-
-            <label for="durationPerCall">Required Duration Per Call (minutes):</label>
-            <input type="number" id="durationPerCall" value="30" min="1" />
-
-            <button id="processButton">Process Call Data</button>
+        <div class="file-upload-container">
+            <div class="file-upload-info">
+                <h2>Upload Facebook Messenger Data</h2>
+                <p>Upload your Facebook Messenger JSON file to analyze video call history. Your data is processed locally and never leaves your device.</p>
+                <ul class="instructions">
+                    <li>Download your Facebook Messenger data from <a href="https://www.facebook.com/dyi/" target="_blank">Facebook Download Your Information</a></li>
+                    <li>Select JSON format when downloading</li>
+                    <li>Upload the messages.json file from the conversation with your co-parent</li>
+                </ul>
+            </div>
+            <div class="file-upload">
+                <label for="fileInput" class="file-upload-label">
+                    <span class="upload-icon">📁</span>
+                    <span>Choose File</span>
+                </label>
+                <input type="file" id="fileInput" accept=".json" />
+                <div id="fileName" class="file-name"></div>
+            </div>
         </div>
-        <div id="loadingIndicator" style="display:none;">Processing data, please wait...</div>
 
+        <div id="settings" class="settings-panel">
+            <h2>Analysis Settings</h2>
+            
+            <div class="settings-grid">
+                <div class="settings-column">
+                    <label for="timezoneSelect">Timezone:</label>
+                    <select id="timezoneSelect">
+                        <option value="UTC">UTC</option>
+                        <option value="America/New_York">Eastern Time (ET)</option>
+                        <option value="America/Chicago">Central Time (CT)</option>
+                        <option value="America/Denver">Mountain Time (MT)</option>
+                        <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                        <option value="America/Anchorage">Alaska Time</option>
+                        <option value="Pacific/Honolulu">Hawaii Time</option>
+                        <option value="Europe/London">London</option>
+                        <option value="Europe/Paris">Paris</option>
+                        <option value="Europe/Berlin">Berlin</option>
+                        <option value="Australia/Sydney">Sydney</option>
+                    </select>
 
-        <div id="summary"></div>
-        <div id="details"></div>
+                    <label for="startDate">Start Date:</label>
+                    <input type="date" id="startDate" />
+
+                    <label for="endDate">End Date:</label>
+                    <input type="date" id="endDate" />
+                </div>
+                
+                <div class="settings-column">
+                    <label for="callsPerWeek">Required Calls Per Week:</label>
+                    <input type="number" id="callsPerWeek" value="1" min="1" />
+
+                    <label for="durationPerCall">Required Duration Per Call (minutes):</label>
+                    <input type="number" id="durationPerCall" value="30" min="1" />
+                    
+                    <div id="participantsRoles" class="participants-roles"></div>
+                </div>
+            </div>
+            
+            <button id="processButton" class="process-button">Analyze Call Data</button>
+        </div>
+        
+        <div id="loadingIndicator" class="loading-indicator" style="display:none;">
+            <div class="spinner"></div>
+            <p>Processing data, please wait...</p>
+        </div>
+
+        <div id="exportContainer" class="export-container" style="display:none;">
+            <h2>Export Data</h2>
+            <div class="export-controls">
+                <select id="exportType">
+                    <option value="all-calls">All Calls</option>
+                    <option value="daily-summary">Daily Summary</option>
+                    <option value="weekly-summary">Weekly Summary</option>
+                    <option value="monthly-summary">Monthly Summary</option>
+                </select>
+                <button onclick="exportToCSV()" class="export-button">Export to CSV</button>
+            </div>
+        </div>
+
+        <div id="summary" class="results-section"></div>
+        <div id="details" class="results-section"></div>
+        
+        <footer>
+            <p>This tool processes all data locally in your browser. No information is uploaded to any server.</p>
+            <p>For legal purposes, please consult with your attorney before using this data in court proceedings.</p>
+        </footer>
     </div>
+    
+    <script>
+        // Store duration per call in window object for access in other functions
+        window.durationPerCall = 0;
+        
+        // Update file name display when file is selected
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const fileName = event.target.files[0] ? event.target.files[0].name : 'No file selected';
+            document.getElementById('fileName').textContent = fileName;
+        });
+        
+        // Set default dates (last 3 months)
+        window.addEventListener('DOMContentLoaded', () => {
+            const today = new Date();
+            const threeMonthsAgo = new Date();
+            threeMonthsAgo.setMonth(today.getMonth() - 3);
+            
+            document.getElementById('startDate').valueAsDate = threeMonthsAgo;
+            document.getElementById('endDate').valueAsDate = today;
+            
+            // Store the duration per call when processing
+            document.getElementById('processButton').addEventListener('click', function() {
+                window.durationPerCall = parseInt(document.getElementById('durationPerCall').value) * 60;
+            });
+        });
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
